@@ -1,0 +1,20 @@
+micronaut:
+  application:
+    name: excel-formula-engine
+  server:
+    port: 8080
+  netty:
+    default:
+      allocator:
+        max-order: 3
+
+jackson:
+  serialization:
+    writeDatesAsTimestamps: false
+  deserialization:
+    failOnUnknownProperties: false
+
+logger:
+  levels:
+    com.xymfb.formula: INFO
+    io.micronaut: INFO
