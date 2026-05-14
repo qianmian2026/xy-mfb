@@ -8,6 +8,10 @@ import org.graalvm.polyglot.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+
 @Singleton
 public class FormulaEngine {
     private static final Logger logger = LoggerFactory.getLogger(FormulaEngine.class);
@@ -24,138 +28,41 @@ public class FormulaEngine {
     }
 
     private void loadFormulaJS() {
-        String formulaJSScript = """
-            const FORMULAS = {
-                SUM: function(...args) {
-                    return args.flat(Infinity).reduce((acc, val) => acc + (Number(val) || 0), 0);
-                },
-                AVERAGE: function(...args) {
-                    const flat = args.flat(Infinity);
-                    const sum = flat.reduce((acc, val) => acc + (Number(val) || 0), 0);
-                    return sum / flat.length;
-                },
-                MAX: function(...args) {
-                    return Math.max(...args.flat(Infinity).map(v => Number(v) || 0));
-                },
-                MIN: function(...args) {
-                    return Math.min(...args.flat(Infinity).map(v => Number(v) || 0));
-                },
-                COUNT: function(...args) {
-                    return args.flat(Infinity).filter(v => v !== null && v !== undefined && v !== '').length;
-                },
-                IF: function(condition, trueVal, falseVal) {
-                    return condition ? trueVal : falseVal;
-                },
-                ROUND: function(num, decimals) {
-                    const factor = Math.pow(10, decimals || 0);
-                    return Math.round(Number(num) * factor) / factor;
-                },
-                ABS: function(num) {
-                    return Math.abs(Number(num));
-                },
-                SQRT: function(num) {
-                    return Math.sqrt(Number(num));
-                },
-                POWER: function(base, exponent) {
-                    return Math.pow(Number(base), Number(exponent));
-                },
-                INT: function(num) {
-                    return Math.floor(Number(num));
-                },
-                MOD: function(number, divisor) {
-                    return Number(number) % Number(divisor);
-                },
-                LEFT: function(text, numChars) {
-                    return String(text).substring(0, numChars);
-                },
-                RIGHT: function(text, numChars) {
-                    const str = String(text);
-                    return str.substring(str.length - numChars);
-                },
-                MID: function(text, startNum, numChars) {
-                    return String(text).substring(startNum - 1, startNum - 1 + numChars);
-                },
-                LEN: function(text) {
-                    return String(text).length;
-                },
-                UPPER: function(text) {
-                    return String(text).toUpperCase();
-                },
-                LOWER: function(text) {
-                    return String(text).toLowerCase();
-                },
-                TRIM: function(text) {
-                    return String(text).trim();
-                },
-                CONCAT: function(...args) {
-                    return args.join('');
-                },
-                AND: function(...args) {
-                    return args.every(v => v);
-                },
-                OR: function(...args) {
-                    return args.some(v => v);
-                },
-                NOT: function(value) {
-                    return !value;
-                },
-                TRUE: function() {
-                    return true;
-                },
-                FALSE: function() {
-                    return false;
-                },
-                ISNUMBER: function(value) {
-                    return typeof value === 'number' && !isNaN(value);
-                },
-                ISTEXT: function(value) {
-                    return typeof value === 'string';
-                },
-                ISBLANK: function(value) {
-                    return value === null || value === undefined || value === '';
-                }
-            };
-
-            function parseFormula(formula, variables) {
-                let expr = formula;
-                
-                for (const [key, value] of Object.entries(variables)) {
-                    const regex = new RegExp('\\\\b' + key + '\\\\b', 'gi');
-                    if (typeof value === 'string') {
-                        expr = expr.replace(regex, '"' + value.replace(/"/g, '\\\\"') + '"');
-                    } else {
-                        expr = expr.replace(regex, value);
-                    }
-                }
-                
-                for (const funcName of Object.keys(FORMULAS)) {
-                    const regex = new RegExp('\\\\b' + funcName + '\\\\s*\\\\(', 'gi');
-                    expr = expr.replace(regex, 'FORMULAS.' + funcName + '(');
-                }
-                
-                expr = expr.replace(/，/g, ',');
-                
-                return expr;
+        try (InputStream is = getClass().getResourceAsStream("/formula.min.js")) {
+            if (is != null) {
+                String formulaJSScript = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                context.eval("js", formulaJSScript);
+                logger.info("Formula.js 加载成功");
+            } else {
+                logger.error("无法找到 formula.min.js");
+                throw new RuntimeException("无法找到 formula.min.js");
             }
-
-            function evaluate(formula, variables) {
-                try {
-                    const parsed = parseFormula(formula, variables);
-                    const result = eval(parsed);
-                    return { success: true, result: result, parsed: parsed };
-                } catch (e) {
-                    return { success: false, error: e.message };
-                }
-            }
-            """;
-        context.eval("js", formulaJSScript);
+        } catch (IOException e) {
+            logger.error("加载Formula.js失败", e);
+            throw new RuntimeException("加载Formula.js失败", e);
+        }
     }
 
     public CalculationResult calculate(String formula, double a1, double a2) {
         try {
-            Value evaluateFunc = context.getBindings("js").getMember("evaluate");
-            Value vars = context.eval("js", "({A1: " + a1 + ", A2: " + a2 + "})");
-            Value result = evaluateFunc.execute(formula, vars);
+            String jsCode = """
+                (function() {
+                    var A1 = $A1$;
+                    var A2 = $A2$;
+                    var expr = '$FORMULA$';
+                    expr = expr.replace(/，/g, ',');
+                    try {
+                        var result = FORMULAS.EVALUATE(expr, {A1: A1, A2: A2});
+                        return {success: true, result: result};
+                    } catch (e) {
+                        return {success: false, error: e.message};
+                    }
+                })()
+                """.replace("$A1$", String.valueOf(a1))
+                .replace("$A2$", String.valueOf(a2))
+                .replace("$FORMULA$", escapeFormula(formula));
+
+            Value result = context.eval("js", jsCode);
             
             boolean success = result.getMember("success").asBoolean();
             if (success) {
@@ -171,13 +78,21 @@ public class FormulaEngine {
         }
     }
 
+    private String escapeFormula(String formula) {
+        return formula.replace("\\", "\\\\").replace("'", "\\'");
+    }
+
     private Object convertValue(Value value) {
         if (value.isNull()) return null;
         if (value.isBoolean()) return value.asBoolean();
         if (value.isNumber()) {
             if (value.fitsInInt()) return value.asInt();
             if (value.fitsInLong()) return value.asLong();
-            return value.asDouble();
+            double d = value.asDouble();
+            if (d == Math.floor(d) && !Double.isInfinite(d)) {
+                return (long) d;
+            }
+            return d;
         }
         if (value.isString()) return value.asString();
         return value.toString();
