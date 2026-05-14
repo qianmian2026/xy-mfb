@@ -2,7 +2,7 @@ micronaut:
   application:
     name: excel-formula-engine
   server:
-    port: 8081
+    port: 8082
   netty:
     default:
       allocator:
