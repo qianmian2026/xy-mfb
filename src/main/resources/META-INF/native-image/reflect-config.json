@@ -1,0 +1,35 @@
+[
+  {
+    "name": "io.micronaut.http.server.netty.handler.PipeliningServerHandler",
+    "allDeclaredMethods": true,
+    "methods": [
+      { "name": "channelRead", "parameterTypes": ["io.netty.channel.ChannelHandlerContext", "java.lang.Object"] }
+    ]
+  },
+  {
+    "name": "io.netty.channel.ChannelInboundHandlerAdapter",
+    "allDeclaredMethods": true,
+    "methods": [
+      { "name": "channelRead", "parameterTypes": ["io.netty.channel.ChannelHandlerContext", "java.lang.Object"] }
+    ]
+  },
+  {
+    "name": "io.micronaut.http.server.netty.handler.RequestHandler",
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http.HttpServerCodec",
+    "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.xymfb.formula.model.FormulaRequest",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "com.xymfb.formula.model.FormulaResponse",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true
+  }
+]
