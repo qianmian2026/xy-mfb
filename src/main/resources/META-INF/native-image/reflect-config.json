@@ -21,5 +21,15 @@
   {
     "name": "io.netty.handler.codec.http.HttpServerCodec",
     "allDeclaredConstructors": true
+  },
+  {
+    "name": "com.xymfb.formula.model.FormulaRequest",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "com.xymfb.formula.model.FormulaResponse",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true
   }
 ]

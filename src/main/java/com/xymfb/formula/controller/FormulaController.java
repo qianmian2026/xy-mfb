@@ -1,5 +1,8 @@
-package com.xymfb.formula;
+package com.xymfb.formula.controller;
 
+import com.xymfb.formula.model.FormulaRequest;
+import com.xymfb.formula.model.FormulaResponse;
+import com.xymfb.formula.service.FormulaService;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
@@ -11,11 +14,11 @@ import org.slf4j.LoggerFactory;
 @Controller("/api/formula")
 public class FormulaController {
     private static final Logger logger = LoggerFactory.getLogger(FormulaController.class);
-    private final FormulaEngine formulaEngine;
+    private final FormulaService formulaService;
 
     @Inject
-    public FormulaController(FormulaEngine formulaEngine) {
-        this.formulaEngine = formulaEngine;
+    public FormulaController(FormulaService formulaService) {
+        this.formulaService = formulaService;
     }
 
     @Post(consumes = MediaType.APPLICATION_JSON, produces = MediaType.APPLICATION_JSON)
@@ -23,7 +26,7 @@ public class FormulaController {
         logger.info("收到公式计算请求: formula={}, A1={}, A2={}", 
                 request.getFormula(), request.getA1(), request.getA2());
         
-        FormulaEngine.CalculationResult result = formulaEngine.calculate(
+        FormulaService.CalculationResult result = formulaService.evaluate(
                 request.getFormula(),
                 request.getA1(),
                 request.getA2()

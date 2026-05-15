@@ -1,4 +1,4 @@
-package com.xymfb.formula;
+package com.xymfb.formula.model;
 
 import io.micronaut.core.annotation.Introspected;
 
